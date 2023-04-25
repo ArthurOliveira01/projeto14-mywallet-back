@@ -28,7 +28,6 @@ export const postDeal = async (req, res) =>{
             const id = exists.userId;
             const final = type.tipo.replace(":", "");
             const data = new Date();
-            console.log(data)
             const intoDB = {
                 userId: id,
                 type: final,
@@ -78,6 +77,7 @@ export const getDeal = async (req, res) => {
                 text: text,
                 date: date
             }
+            console.log(sent);
             return res.status(200).send(sent);
         }
     } catch{
