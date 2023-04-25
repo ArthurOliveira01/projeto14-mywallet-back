@@ -30,6 +30,11 @@ const loginSchema = Joi.object({
     password: Joi.string().max(16).required()
 });
 
+const postSchema = Joi.object({
+    text: Joi.string().min(3).max(13).required(),
+    value: Joi.number().min(0.1).required()
+});
+
 app.post('/cadastro', async (req, res) =>{
     const name = req.body.name;
     const email = req.body.email;
@@ -76,7 +81,7 @@ app.post('/', async (req, res) => {
             const compare = bcrypt.compareSync(password, hash);
             if(compare){
                 const token = uuid();
-                await db.collection("accounts").insertOne({userId: exists._id, token})
+                await db.collection("accounts").insertOne({userId: exists._id, token: token})
                 return res.status(200).send(token);
             }
             return res.sendStatus(401);
@@ -86,6 +91,49 @@ app.post('/', async (req, res) => {
         console.log(err);
         return res.sendStatus(500);
     }
+});
+
+app.post('/nova-transacao/:tipo', async (req, res) =>{
+    const type = req.params;
+    const authorization = req.headers.authorization;
+    const value = req.body.value;
+    value?.toFixed(1);
+    const text = req.body.text;
+    const validation = postSchema.validate(req.body);
+
+    if(authorization === undefined){
+        return res.sendStatus(401);
+    }
+    if(type.tipo !== ':saida' && type.tipo !== ':entrada'){ 
+        return res.sendStatus(422);
+    }
+    const token = authorization.replace("Bearer ", "");
+    try{
+        if(validation.error){
+            return res.sendStatus(422);
+        }
+        const exists = await db.collection("accounts").findOne({token: token});
+        if(exists){
+            const id = exists.userId;
+            const final = type.tipo.replace(":", "");
+            const intoDB = {
+                userId: id,
+                type: final,
+                value: value,
+                text: text
+            };
+            console.log(intoDB);
+            const sent = await db.collection("deals").insertOne(intoDB);
+            return res.sendStatus(200);
+        }
+        return res.sendStatus(422);   
+    } catch(err){
+        console.log(err);
+        return res.sendStatus(500);
+    }
+});
+
+app.get('/home', async (req, res) =>{
 
 });
 
