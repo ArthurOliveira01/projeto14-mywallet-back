@@ -10,10 +10,13 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-const client  = new MongoClient('mongodb://localhost:27017');
+console.log('1');
+const client  = new MongoClient('mongodb://0.0.0.0:27017/');
+console.log('2');
 let db;
 
 client.connect().then(() => {
+    console.log('teste');
     db = client.db();
     console.log('conectou');
 }).catch((err) => console.log(err.message))
@@ -116,11 +119,14 @@ app.post('/nova-transacao/:tipo', async (req, res) =>{
         if(exists){
             const id = exists.userId;
             const final = type.tipo.replace(":", "");
+            const data = new Date();
+            console.log(data)
             const intoDB = {
                 userId: id,
                 type: final,
                 value: value,
-                text: text
+                text: text,
+                date: `${data.getDate()}/${data.getMonth()}`
             };
             console.log(intoDB);
             const sent = await db.collection("deals").insertOne(intoDB);
@@ -134,7 +140,41 @@ app.post('/nova-transacao/:tipo', async (req, res) =>{
 });
 
 app.get('/home', async (req, res) =>{
-
+    const authorization = req.headers.authorization;
+    if(authorization === undefined){
+        return res.sendStatus(401);
+    }
+    const token = authorization.replace("Bearer ", "");
+    try{
+        const exists = await db.collection("accounts").findOne({token: token});
+        if(exists){
+            const id = exists.userId;
+            console.log(exists);
+            console.log(id);
+            const deals = await db.collection("deals").find({userId: id}).toArray();
+            let k = 0;
+            let type = [];
+            let value = [];
+            let text = [];
+            let date = [];
+            while(k < deals.length){
+                type.push(deals[k].type);
+                value.push(deals[k].value);
+                text.push(deals[k].text);
+                date.push(deals[k].date);
+                k++;
+            }
+            let sent = {
+                type: type,
+                value: value,
+                text: text,
+                date: date
+            }
+            return res.status(200).send(sent);
+        }
+    } catch{
+        return res.sendStatus(500);
+    }
 });
 
 app.listen(5000);
