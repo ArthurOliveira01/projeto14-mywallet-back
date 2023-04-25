@@ -10,4 +10,4 @@ client.connect().then(() => {
     console.log('conectou');
 }).catch((err) => console.log(err.message))
 
-export const db = client.db();;
+export const db = client.db();
